@@ -1,0 +1,182 @@
+include "mapbasic.def"
+include "menu.def"
+include "Icons.def"
+Declare Sub Main
+Declare Sub button_sub1
+Declare Function createRegions(x() as float,y() as float,node_count As Integer) as integer
+
+Type Region							'定义 type类型数据
+	name as String
+	id as String
+	nodeCount as Integer			'region的几点数
+	lng(255) as String				'经度数组
+	lat(255) as String				'纬度数组
+	list as String			 	'经纬度列表
+	regObject as object		'存储Region 的对象数组
+End Type
+dim max_rows as Integer
+Dim regions() as Region  '定义type 类型的数组 rigions() '最大下标为表的最大行数
+Dim listCount as Integer
+dim tmpList() as String
+dim i,j,k as Integer
+dim firstStr as String
+dim lastStr as String
+Dim tmpX,tmpY as String
+
+
+
+Sub Main
+	Create ButtonPad "CreateRegions"  As
+
+	PushButton
+  	Icon 104
+      	Calling button_sub1
+		HelpMsg "经纬度生成Regions"
+
+	Title "CreateRegions" 
+	ToolbarPosition(0,1)
+	Width 2
+	Show
+End Sub
+
+
+
+
+
+
+
+
+Sub button_sub1
+onerror goto error_trap
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+print "==========================================================================================="
+
+
+
+
+max_rows = TableInfo(CreateRegion, TAB_INFO_NROWS)       '取表的最大行数
+Redim regions(max_rows)								'确定数组长度
+
+for i=1 to max_rows Step 1									   '从表的第一行开始遍历表
+	fetch rec i from CreateRegion								'从表的第一行开始遍历表
+	regions(i).name = CreateRegion.name							'将将第一行的name字段复制给 regions(i).name 
+	regions(i).id = CreateRegion.id								'将将第一行的name字段复制给 regions(i).name
+	regions(i).nodeCount = CreateRegion.nodeCount					'把第一行的nodeCount的值赋给regions(i).nodeCount
+
+	lastStr = CreateRegion.list
+	print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	print "list:____" & lastStr 
+	j = 0
+  	do 
+		j = j + 1
+		firstStr = left$(lastStr,instr(1,lastStr,"|")-1)			   '前半部分保存在firstStr 
+		lastStr= right$(lastStr,len(lastStr) - instr(1,lastStr,"|"))   '用第一个"|" 分割经纬度字符串,后半部分保存在lastStr
+
+		print "firstStr:____" & firstStr 
+
+
+		if firstStr <> "" then														'如果firstStr 为空则说明已经到最后一组经纬度 则使用lastStr
+			regions(i).lng(j) = left$(firstStr,instr(1,firstStr,";") - 1)				'一个经纬度组用";"分割,";"左边的保存为lng
+			regions(i).lat(j) = right$(firstStr,len(firstStr) - instr(1,firstStr,";")) 	'";"右边的保存为lat   Val() 函数为字符转换为数字
+		else
+			regions(i).lng(j) = left$(lastStr,instr(1,lastStr,";") - 1)		'一个经纬度组用";"分割,";"前面的保存为lng
+			regions(i).lat(j) = right$(lastStr,len(lastStr) - instr(1,lastStr,";"))		 '";"后面的保存为lat Val()为str转化为number
+		End If
+
+		print "lon:____" & regions(i).lng(j)
+		print "lat:____" & regions(i).lat(j)
+	Loop While firstStr <> ""
+
+	Redim regions(i).lng(j)		'确认数组的长度
+	Redim regions(i).lat(j)	
+	regions(i).nodeCount = j		'确认多边形节点数
+	'print regions(i).nodeCount
+
+next
+
+
+
+
+
+for i=1 to max_rows Step 1									   '此段功能为最后一组经纬度 和倒数第二组经纬度互换位置
+	tmpX = regions(i).lng(regions(i).nodeCount)
+	tmpY = regions(i).lat(regions(i).nodeCount)
+
+	regions(i).lng(regions(i).nodeCount) = regions(i).lng(regions(i).nodeCount - 1)
+	regions(i).lat(regions(i).nodeCount) = regions(i).lat(regions(i).nodeCount - 1)
+
+	regions(i).lng(regions(i).nodeCount - 1) = tmpX
+	regions(i).lat(regions(i).nodeCount - 1) = tmpY
+Next
+
+
+
+
+
+
+
+
+
+Create Table "RegionTab" (name Char(254),id Char(254),nodeCount Integer,list Char(254)) file ".\RegionTab.tab" TYPE NATIVE Charset "WindowsSimpChinese"
+'创建一个  "RegionTab" 表格	保存在".\RegionTab.tab"		
+Create Map For RegionTab CoordSys Earth Projection 1, 0		'创建根据RegionTab表格创建图层 
+
+
+'此段为创建一个没有节点的Region 然后根据数组regions(i).lng(j) 和 regions(i).lat(j)向Region 中添加节点来生成一个多边形区域
+for i=1 to max_rows Step 1		 
+
+	fetch rec i from RegionTab									'将游标移动到RegionTab表的第i行
+	Create Region Into Variable regions(i).regObject 0				' 生成一个空节点的Region对象
+	
+	For j = 1 to regions(i).nodeCount Step 1
+		Alter Object regions(i).regObject Node Add (Val(regions(i).lng(j)),Val(regions(i).lat(j)))	'给空节点的Region对象里添加节点 
+		regions(i).list = regions(i).list & regions(i).lng(j) & ";" & regions(i).lat(j) & "|"			'把经纬度数组拼接为经纬度列表
+	Next
+	
+	Insert Into RegionTab(name,id,nodeCount,list,Object) 			'从regions(i)数组复制到RegionTab 表
+		Values(regions(i).name, regions(i).id, regions(i).nodeCount,regions(i).list,regions(i).regObject)
+Next
+
+
+Commit Table RegionTab Interactive
+
+
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub

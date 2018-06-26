@@ -1,0 +1,256 @@
+include "mapbasic.def"
+include "menu.def"
+include "Icons.def"
+Declare Sub Main
+Declare Sub button_sub1
+Declare Sub button_exchange
+Declare Function exchangeNode(currObj as Object,currTab as string,rowIndex as Integer) as integer
+Declare Function exchangeNode1(currObj as Object) as integer
+Type Region							'定义 type类型数据
+	name as String
+	id as String
+	nodeCount as Integer			'region的几点数
+	lng(255) as String				'经度数组
+	lat(255) as String				'纬度数组
+	list as String			 	'经纬度列表
+	regObject as object		'存储Region 的对象数组
+End Type
+dim max_rows as Integer
+Dim regions() as Region  '定义type 类型的数组 rigions() '最大下标为表的最大行数
+Dim listCount as Integer
+dim tmpList() as String
+dim i,j,k as Integer
+dim firstStr as String
+dim lastStr as String
+Dim tmpX,tmpY as String
+dim nameCol as Alias
+dim idCol as Alias
+dim listCol as Alias
+dim nodeCountCol as Alias
+dim firstTable as Alias
+dim colnn as Alias
+
+
+dim tmpline as Region
+
+
+Sub Main
+	Create ButtonPad "CreateRegions"  As
+
+	PushButton
+  	Icon 104
+      	Calling button_sub1
+		HelpMsg "经纬度生成Regions"
+
+	PushButton
+  	Icon 94
+      	Calling button_exchange
+		HelpMsg "交换所选Region最后两个点的位置"
+
+	Title "CreateRegions" 
+	ToolbarPosition(0,1)
+	Width 2
+	Show
+End Sub
+
+
+Sub button_sub1
+
+	onerror goto error_trap
+
+
+    
+
+firstTable = TableInfo(1, TAB_INFO_NAME)			'获得当前打开表的名称
+max_rows = TableInfo(firstTable, TAB_INFO_NROWS)       '取表的最大行数
+print("max_rows:" & max_rows)
+
+
+    
+dim firstTableColNumber as Integer          '第一个表的总列数
+dim firstTableColName() as String           '第一个表的列名字数组
+dim firstTableColType() as String           '第一个表的总列数据类型 数组
+
+firstTableColNumber =  TableInfo(firstTable,TAB_INFO_NCOLS)          '第一个表的总列数
+Redim firstTableColName(firstTableColNumber)
+Redim firstTableColType(firstTableColNumber)
+
+print("firstTableColNumber:" & firstTableColNumber)
+for i=1 to firstTableColNumber Step 1
+    firstTableColName(i) = ColumnInfo(firstTable, "col"&i, COL_INFO_NAME)
+    firstTableColType(i) = ColumnInfo(firstTable, "col"&i, COL_INFO_TYPE)
+    print(firstTableColName(i) & "," & firstTableColType(i))
+
+next
+
+
+
+    
+   
+
+
+nodeCountCol = firstTable + "." + "nodeCount"	
+listCol = firstTable + "." + "list"	
+Create Map For firstTable CoordSys Earth Projection 1, 0		'创建根据 firstTable 表格创建图层  给普通表添加obj列
+
+
+
+'此段为创建一个没有节点的Region 然后根据数组 tmpline.lng(j) 和tmpline(i).lat(j)向Region 中添加节点来生成一个多边形区域
+for i=1 to max_rows Step 1	
+	fetch rec i from firstTable									'将游标移动到RegionTab表的第i行
+
+    tmpline.nodeCount = Int(nodeCountCol)                            '固定两个字段 nodeCount, list 为 接点数 和节点坐标列表
+    tmpline.list = listCol                                       '取得 list 字段的值
+    
+    'print "=================================="
+    print i
+    'print tmpline.id
+    'print tmpline.nodeCount
+    'print tmpline.list
+    
+    
+	
+    Create Region Into Variable tmpline.regObject 0				' 生成一个空节点的Region对象
+    Redim tmpline.lat(nodeCountCol)		'确认数组的长度
+    Redim tmpline.lng(nodeCountCol)		'确认数组的长度
+    
+    lastStr = tmpline.list                                       '取得 list 字段的值
+	For j = 1 to tmpline.nodeCount Step 1                             ' 此段为分割list 为 单个坐标点的经纬度
+        firstStr = left$(lastStr,instr(1,lastStr,"|")-1)			   '前半部分保存在firstStr 
+		lastStr= right$(lastStr,len(lastStr) - instr(1,lastStr,"|"))   '用第一个"|" 分割经纬度字符串,后半部分保存在lastStr
+        
+        'print "firstStr:" & firstStr 
+        'print "lastStr:" & lastStr 
+        
+        if firstStr <> "" then			'如果firstStr 为空则说明已经到最后一组经纬度 则使用lastStr
+			tmpline.lng(j) = left$(firstStr,instr(1,firstStr,";") - 1)				'一个经纬度组用";"分割,";"左边的保存为lng
+			tmpline.lat(j) = right$(firstStr,len(firstStr) - instr(1,firstStr,";")) 	'";"右边的保存为tmpline.lat   Val() 函数为字符转换为数字
+		else
+			tmpline.lng(j) = left$(lastStr,instr(1,lastStr,";") - 1)		'一个经纬度组用";"分割,";"前面的保存为lng
+			tmpline.lat(j) = right$(lastStr,len(lastStr) - instr(1,lastStr,";"))		 '";"后面的保存为tmpline.lat Val()为str转化为number
+		End If
+        
+		Alter Object tmpline.regObject Node Add (Val(tmpline.lng(j)),Val(tmpline.lat(j)))	'给空节点的Region对象里添加节点 
+         
+	Next
+
+    Update firstTable Set obj = tmpline.regObject where rowid = i       '更新 firstTable 的 obj 列 为上面生成的 region对象 tmpline.regObject
+
+Next
+
+
+'Commit Table firstTable Interactive        '保存 firstTable
+
+
+
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+
+
+Sub button_exchange                             '此过程为 交换Region 对象的最后两个节点的位置
+	onerror goto error_trap
+	dim re as String
+	dim currRegion as object
+	dim i ,j,k,selectRowNum as Integer
+	Dim tmpRegion() as Region
+	dim nodeCount as Integer
+	dim lastLon,lastLat,last2ndLon,last2ndLat as string		'最后两个点的经纬度,last 和last2nd
+    
+	Select * from Selection into tmp
+	selectRowNum = TableInfo(tmp, TAB_INFO_NROWS)       '获取所选区域的行数
+	Redim tmpRegion(selectRowNum)
+
+	for k=1 to selectRowNum  Step 1									   '从表的第一行开始遍历表
+		fetch rec k from tmp
+		currRegion = 	Selection.obj
+
+        nodeCount = ObjectInfo(currRegion, OBJ_INFO_NPNTS) - 1 		'获取对象的节点数 region对象的第一个节点算两次
+        Redim tmpRegion(k).lng(nodeCount)
+        Redim tmpRegion(k).lat(nodeCount)
+
+        for i=1 to nodeCount Step 1	 
+            tmpRegion(k).lng(i) = Str$(ObjectNodeX(currRegion, 1, i) )				' 读取第i个节点的经度
+            tmpRegion(k).lat(i) = Str$(ObjectNodeY(currRegion, 1, i) )				' 读取第i个个节点的纬度		
+        next
+
+        lastLon = tmpRegion(k).lng(nodeCount)
+        lastLat = tmpRegion(k).lat(nodeCount)
+        tmpRegion(k).lng(nodeCount) = tmpRegion(k).lng(nodeCount - 1) 
+        tmpRegion(k).lat(nodeCount) = tmpRegion(k).lat(nodeCount - 1)
+        tmpRegion(k).lng(nodeCount - 1) = lastLon
+        tmpRegion(k).lat(nodeCount - 1) = lastLat
+
+
+
+
+
+
+
+        Create Region Into Variable tmpRegion(k).regObject 0				' 生成一个空节点的Region对象
+        
+        For j = 1 to nodeCount Step 1
+            Alter Object tmpRegion(k).regObject Node Add (Val(tmpRegion(k).lng(j)),Val(tmpRegion(k).lat(j)))		'给空节点的Region对象里添加节点 
+            tmpRegion(k).list = tmpRegion(k).list & tmpRegion(k).lng(j) & ";" & tmpRegion(k).lat(j) & "|"			'把经纬度数组拼接为经纬度列表
+        Next
+
+        Update tmp Set list = tmpRegion(k).list, obj = tmpRegion(k).regObject    where rowid = k     '更新表的obj列为 新创建的Region对象 更新表的list列为tmpRegion.list
+
+
+    next
+	   
+    
+	done: 
+  		exit sub 
+	error_trap: 
+   		print(error$())
+   	resume done 
+
+end Sub 
+
+
+
+
+
+
+
+
+
+
+Function exchangeNode1(currObj as Object) as integer
+	onerror goto error_trap
+
+	dim nodeCount as Integer
+	dim lastLon,lastLat,last2ndLon,last2ndLat as float		'最后两个点的经纬度,last 和last2nd
+	nodeCount = ObjectInfo(currObj, OBJ_INFO_NPNTS) - 1 		'获取对象的节点数 region对象的第一个节点算两次
+	lastLon = ObjectNodeX(currObj, 1, nodeCount) 				' 读取最后一个节点的经度
+	lastLat = ObjectNodeY(currObj, 1, nodeCount) 				' 读取最后一个节点的纬度
+	last2ndLon = ObjectNodeX(currObj, 1, nodeCount - 1) 				' 读取倒数第二个节点的经度
+	last2ndLat = ObjectNodeY(currObj, 1, nodeCount - 1) 				' 读取倒数第二个节点的纬度
+
+	Alter Object currObj 
+		Node Set Position 1, nodeCount (last2ndLon,last2ndLat)			'设置倒数第一个点的位置为 倒数第二个点的经纬度
+	Alter Object currObj 
+		Node Set Position 1, nodeCount-1 (lastLon,lastLat)			'设置倒数第一个点的位置为 倒数第二个点的经纬度
+
+
+
+	
+
+	done: 
+  		exit sub 
+	error_trap: 
+   		print(error$())
+   	resume done 
+
+end Function 
+
+
+

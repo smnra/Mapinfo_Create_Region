@@ -1,0 +1,17 @@
+!table
+!version 300
+!charset WindowsSimpChinese
+
+Definition Table
+  File "ee.csv"
+  Type ASCII Delimiter "," Titles Charset "Neutral"
+  Fields 4
+    name Char (26) ;
+    id Char (24) ;
+    nodeCount Smallint ;
+    list Char (83) ;
+begin_metadata
+"\IsReadOnly" = "FALSE"
+"\MapInfo" = ""
+"\MapInfo\TableID" = "4b448ae0-396d-495e-9f3e-4aa28e579cfe"
+end_metadata

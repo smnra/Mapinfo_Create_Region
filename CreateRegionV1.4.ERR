@@ -1,0 +1,15 @@
+(createregionv1.4.mb:120) Found [firstTableColNumber] while searching for [A numeric constant].  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:121) Found [firstTableColNumber] while searching for [A numeric constant].  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:123) Missing '=' in assignment to fieldName.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:156) Missing '=' in assignment to rowValues.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:217) [End sub] found without corresponding sub statement.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:223) Unrecognized command: sub.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:281) [End sub] found without corresponding sub statement.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:292) Unrecognized command: function.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:295) Invalid redefinition of nodeCount.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:296) Invalid redefinition of lastLon.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:296) Invalid redefinition of lastLat.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:296) Invalid redefinition of last2ndLon.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:296) Invalid redefinition of last2ndLat.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:304) Variable currObj not defined.  Too many errors.  Error information has been lost.
+(createregionv1.4.mb:304) Unrecognized command: Node.  Too many errors.  Error information has been lost.
