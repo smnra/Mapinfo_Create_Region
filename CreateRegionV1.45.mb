@@ -11,6 +11,8 @@ include "Icons.def"
 Declare Sub Main
 Declare Sub button_sub1
 Declare Sub button_exchange
+Declare Sub button_getRegionInfo
+Declare Sub regionNodeInverted
 Declare Function exchangeNode(currObj as Object,currTab as string,rowIndex as Integer) as integer
 Declare Function exchangeNode1(currObj as Object) as integer
 Type Region							'¶¨Òå typeÀàÐÍÊý¾Ý
@@ -53,6 +55,16 @@ Sub Main
   	Icon 94
       	Calling button_exchange
 		HelpMsg "½»»»ËùÑ¡Region×îºóÁ½¸öµãµÄÎ»ÖÃ"
+
+	PushButton
+  	Icon 97
+      	Calling button_getRegionInfo
+		HelpMsg "ÌáÈ¡Region µÄ½ÚµãÊý ºÍ¾­Î³¶ÈÁÐ±í"
+        
+  	PushButton
+  	Icon 96
+      	Calling regionNodeInverted
+		HelpMsg "ÄæÐòËùÑ¡Region"      
 
 
 	Title "RegionTools" 
@@ -227,6 +239,150 @@ Sub button_exchange                             '´Ë¹ý³ÌÎª ½»»»Region ¶ÔÏóµÄ×îºóÁ
    	resume done 
 
 end Sub 
+
+
+
+
+
+
+
+
+
+sub button_getRegionInfo                                    '»ñÈ¡ËùÑ¡½ÚµãµÄ¾­Î³¶È ºÍ ½ÓµãÊýÐÅÏ¢
+    onerror goto error_trap
+    
+
+
+    dim tableFalg as Integer
+    tableFalg = 0
+    firstTable = TableInfo(Selection, TAB_INFO_NAME)			'»ñµÃµ±Ç°´ò¿ª±íµÄÃû³Æ
+    max_rows = TableInfo(firstTable, TAB_INFO_NROWS)       'È¡±íµÄ×î´óÐÐÊý
+    print("max_rows:" & max_rows)
+
+
+        
+    dim firstTableColNumber as Integer          'µÚÒ»¸ö±íµÄ×ÜÁÐÊý
+    dim firstTableColName() as String           'µÚÒ»¸ö±íµÄÁÐÃû×ÖÊý×é
+    dim firstTableColType() as String           'µÚÒ»¸ö±íµÄ×ÜÁÐÊý¾ÝÀàÐÍ Êý×é
+
+    firstTableColNumber =  TableInfo(firstTable,TAB_INFO_NCOLS)          'µÚÒ»¸ö±íµÄ×ÜÁÐÊý
+    Redim firstTableColName(firstTableColNumber)
+    Redim firstTableColType(firstTableColNumber)
+
+    print("firstTableColNumber:" & firstTableColNumber)
+    for i=1 to firstTableColNumber Step 1
+        firstTableColName(i) = ColumnInfo(firstTable, "col"&i, COL_INFO_NAME)
+        firstTableColType(i) = ColumnInfo(firstTable, "col"&i, COL_INFO_TYPE)
+        if firstTableColName(i) = "coordList" then
+            tableFalg = 1
+        end if
+        print(firstTableColName(i) & "," & firstTableColType(i))
+
+    next
+
+    if tableFalg = 0 then
+        Alter Table TableInfo (1, 1)  ( add coordList Char(254) ) Interactive
+    end if
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    Dim tempPolygon as Object                             '¶¨ÒåÁÙÊ±´æ´¢ Polgon ¶ÔÏóµÄ±äÁ¿
+    Dim nodeCounter as Integer                            '¶¨Òå ±äÁ¿ÓÃÀ´±£´æ PolgonµÄ½ÚµãµÄ¸öÊý
+    Dim subPolygonCount as Integer                        '¶¨Òå ×Ó¶à±ßÐÎµÄ¸öÊý±äÁ¿
+    Dim x,y as Float                                      'x,y ×ø±ê
+    dim subNumber,n as Integer
+    dim coordListGet as String
+
+    max_rows = TableInfo(Selection, TAB_INFO_NROWS)       'È¡Selection±íµÄ×î´óÐÐÊý
+    Redim regions(max_rows)								  'È·¶¨Êý×é³¤¶È
+    'counter = ObjectInfo(Selection.obj, OBJ_INFO_NPNTS)       'µÚiÐÐ¶ÔÓ¦µÄ×ÜµÄ¶à±ßÐÎµÄ½Úµã¸öÊý
+    print "±¾´Î¹²Ñ¡Ôñ" & max_rows  & "¸ö¶à±ßÐÎ Region" 
+
+    for i=1 to max_rows Step 1							  '´Ó±íµÄµÚÒ»ÐÐ¿ªÊ¼±éÀú±í
+        fetch rec i from Selection						  '´Ó±íµÄµÚÒ»ÐÐ¿ªÊ¼±éÀú±í
+        coordListGet = ""
+        tempPolygon = Selection.obj                    '°ÑµÚiÐÐ¶ÔÓ¦µÄpolygon ¶ÔÏó  ´æ´¢µ½ tempPolygon ±äÁ¿ÖÐ
+        subPolygonCount = ObjectInfo(tempPolygon, OBJ_INFO_NPOLYGONS) '×Ó¶à±ßÐÎµÄ¸öÊý
+        print "µÚ" & i & "¸ö¶à±ßÐÎ_Region ¹²ÓÐ" & subPolygonCount & "¸ö×Ó¶à±ßÐÎPolygon"
+        
+        for subNumber=1 to subPolygonCount Step 1               '±éÀúÃ¿Ò»¸ö×Ó¶à±ßÐÎ'
+            nodeCounter = ObjectInfo(tempPolygon, OBJ_INFO_NPOLYGONS+subNumber)   'µÚiÐÐ¶ÔÓ¦µÄ Polygon µÄµÚsub¸ö×Ó¶à±ßÐÎµÄ½Úµã¸öÊý 
+            print "µÚ" & i & "¸ö¶à±ßÐÎ_RegionµÄ µÚ" & subNumber & "¸ö×Ó¶à±ßÐÎPolygon ¹²ÓÐ" & nodeCounter & "¸ö½Úµã"
+            for n=1 to nodeCounter-1 Step 1      
+                x = ObjectNodeX(tempPolygon, subNumber, n)
+                y = ObjectNodeY(tempPolygon, subNumber, n)
+                print "µÚ" & i & "Region µÄµÚ" & subNumber & "¸ö×ÓPolygon µÄµÚ" & n & "¸ö½ÚµãµÄ×ø±êÎª(" & Format$(x, "#.#######") & " " & Format$(y, "#.#######") & ")" 
+                coordListGet = coordListGet & Format$(x, "#.#######") & " " & Format$(y, "#.#######") & ";"   
+            Next 
+        
+        Update Selection Set coordList = coordListGet  Where Rowid = i
+        Next 
+        
+    Next
+    
+	done: 
+  		exit sub 
+	error_trap: 
+   		print(error$())
+   	resume done 
+
+end Sub 
+
+
+
+
+
+
+sub regionNodeInverted
+    onerror goto error_trap
+    
+    Dim tempPolygon as Object                             '¶¨ÒåÁÙÊ±´æ´¢ Polgon ¶ÔÏóµÄ±äÁ¿
+    Dim nodeCounter as Integer                            '¶¨Òå ±äÁ¿ÓÃÀ´±£´æ PolgonµÄ½ÚµãµÄ¸öÊý
+    Dim subPolygonCount as Integer                        '¶¨Òå ×Ó¶à±ßÐÎµÄ¸öÊý±äÁ¿
+    Dim x,y as Float                                      'x,y ×ø±ê
+    dim subNumber,n as Integer
+
+
+    max_rows = TableInfo(Selection, TAB_INFO_NROWS)       'È¡Selection±íµÄ×î´óÐÐÊý
+    Redim regions(max_rows)								  'È·¶¨Êý×é³¤¶È
+    'counter = ObjectInfo(Selection.obj, OBJ_INFO_NPNTS)       'µÚiÐÐ¶ÔÓ¦µÄ×ÜµÄ¶à±ßÐÎµÄ½Úµã¸öÊý
+    print "±¾´Î¹²Ñ¡Ôñ" & max_rows  & "¸ö¶à±ßÐÎ Region" 
+    for i=1 to max_rows Step 1							  '´Ó±íµÄµÚÒ»ÐÐ¿ªÊ¼±éÀú±í
+        fetch rec i from Selection						  '´Ó±íµÄµÚÒ»ÐÐ¿ªÊ¼±éÀú±í
+        tempPolygon = Selection.obj                    '°ÑµÚiÐÐ¶ÔÓ¦µÄpolygon ¶ÔÏó  ´æ´¢µ½ tempPolygon ±äÁ¿ÖÐ
+        subPolygonCount = ObjectInfo(tempPolygon, OBJ_INFO_NPOLYGONS) '×Ó¶à±ßÐÎµÄ¸öÊý
+        print "µÚ" & i & "¸ö¶à±ßÐÎ_Region ¹²ÓÐ" & subPolygonCount & "¸ö×Ó¶à±ßÐÎPolygon"
+        
+        for subNumber=1 to subPolygonCount Step 1               '±éÀúÃ¿Ò»¸ö×Ó¶à±ßÐÎ'
+            nodeCounter = ObjectInfo(tempPolygon, OBJ_INFO_NPOLYGONS+subNumber)   'µÚiÐÐ¶ÔÓ¦µÄ Polygon µÄµÚsub¸ö×Ó¶à±ßÐÎµÄ½Úµã¸öÊý 
+            print "µÚ" & i & "¸ö¶à±ßÐÎ_RegionµÄ µÚ" & subNumber & "¸ö×Ó¶à±ßÐÎPolygon ¹²ÓÐ" & nodeCounter & "¸ö½Úµã"
+            for n=1 to nodeCounter-1 Step 1      
+                x = ObjectNodeX(tempPolygon, subNumber, n)
+                y = ObjectNodeY(tempPolygon, subNumber, n)
+                print "µÚ" & i & "Region µÄµÚ" & subNumber & "¸ö×ÓPolygon µÄµÚ" & n & "¸ö½ÚµãµÄ×ø±êÎª(" & str$(x) & "," & str$(y) & ")" 
+                Alter Object tempPolygon  '¸üÐÂµÚ subNumber ¸ö ×Ó¶à±ßÐÎµÄ µÚ(nodeCounter - (n-1)) ¸ö ½ÚµãµÄ×ø±êÎª µÚn¸öµãµÄ×ø±ê
+                     Node Set Position subNumber, (nodeCounter - (n-1)) (x, y)
+                print "µÚ" & (nodeCounter - (n-1)) & "¸ö½ÚµãÌæ»»µÚ" & n & "¸ö½Úµã"
+            Next 
+            
+        Next 
+        
+    Next
+    
+	done: 
+  		exit sub 
+	error_trap: 
+   		print(error$())
+   	resume done 
+
+end Sub 
+
 
 
 
